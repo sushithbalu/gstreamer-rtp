@@ -1,8 +1,7 @@
 #include <gst/gst.h>
 #include <glib.h>
 #include <stdio.h>
-
-#define RTP_PORT 5000
+#include <stdlib.h>
 
 static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
 {
@@ -16,20 +15,20 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
 			break;
 
 		case GST_MESSAGE_ERROR: {
-						gchar  *debug;
-						GError *error;
+			gchar  *debug;
+			GError *error;
 
-						gst_message_parse_error (msg, &error, &debug);
+			gst_message_parse_error (msg, &error, &debug);
 
-						g_free (debug);
-						g_printerr ("Error: %s\n", error->message);
-						g_error_free (error);
+			g_free (debug);
+			g_printerr ("Error: %s\n", error->message);
+			g_error_free (error);
 
-						g_main_loop_quit (loop);
-						break;
-					}
+			g_main_loop_quit (loop);
+			break;
+		}
 		default:
-					break;
+			break;
 	}
 	return TRUE;
 }
@@ -50,11 +49,10 @@ int main(int argc, char *argv[]) {
 
 	loop = g_main_loop_new (NULL, FALSE);
 
-	if( argc != 2) {
-		g_printerr ("Usage: %s <host>\n", argv[0]);
+	if( argc < 3) {
+		g_printerr ("Usage: %s <host>  <port>\n", argv[0]);
 		return -1;
 	}
-
 
 	/**
 	  gst-launch-1.0 -v  v4l2src device=/dev/video0 ! videoconvert ! queue !
@@ -99,7 +97,7 @@ int main(int argc, char *argv[]) {
 	"byte-stream", 1,"key-int-max", 10,"quantizer", 50,"vbv-buf-capacity", 0,NULL);
 
 	/*set rtp stream sink*/
-	g_object_set (G_OBJECT (sink), "port", RTP_PORT, NULL);
+	g_object_set (G_OBJECT (sink), "port", atoi(argv[2]), NULL);
 	g_object_set (G_OBJECT (sink), "host", argv[1], NULL);
 	g_object_set (G_OBJECT (sink), "sync", FALSE, NULL);
 	g_object_set (G_OBJECT (sink), "auto-multicast", TRUE, NULL);
@@ -126,12 +124,6 @@ int main(int argc, char *argv[]) {
 		gst_object_unref (pipeline);
 		return -1;
 	}
-	/*
-	   gst-launch-1.0 -v  v4l2src device=/dev/video0 ! videoconvert ! queue !
-	   x264enc tune=zerolatency speed-preset=superfast ! queue ! mux2. pulsesrc ! 
-	   audioresample ! audioconvert ! queue ! faac ! queue ! mux2. mpegtsmux name="mux2" !
-	   rtpmp2tpay ! udpsink host=192.168.1.101 port=5000 sync=false auto-multicast=true
-	 */
 
 	if (!gst_element_link_many ( mic_src, audio_convert, audio_resample , queue2, NULL)) {
 		g_printerr ("Elements could not be linked confert audio queue\n");
@@ -173,8 +165,6 @@ int main(int argc, char *argv[]) {
 	g_print ("Returned, stopping playback\n");
 	gst_element_set_state (pipeline, GST_STATE_NULL);
 
-
-	
 	gst_object_unref (GST_OBJECT(pipeline));
 	g_source_remove (bus_watch_id);
 	g_main_loop_unref (loop);

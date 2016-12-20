@@ -16,20 +16,20 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
 			break;
 
 		case GST_MESSAGE_ERROR: {
-						gchar  *debug;
-						GError *error;
+			gchar  *debug;
+			GError *error;
 
-						gst_message_parse_error (msg, &error, &debug);
+			gst_message_parse_error (msg, &error, &debug);
 
-						g_free (debug);
-						g_printerr ("Error: %s\n", error->message);
-						g_error_free (error);
+			g_free (debug);
+			g_printerr ("Error: %s\n", error->message);
+			g_error_free (error);
 
-						g_main_loop_quit (loop);
-						break;
-					}
+			g_main_loop_quit (loop);
+			break;
+		}
 		default:
-					break;
+			break;
 	}
 	return TRUE;
 }
@@ -38,7 +38,7 @@ static void on_pad_added (GstElement *element,GstPad *pad,gpointer data)
 {
 	GstPad *sinkpad;
 	GstElement *s = (GstElement *) data;
-	/* We can now link this pad with the vorbis-decoder sink pad */
+	/* pad for decodebin */
 	g_print ("Dynamic pad created, linking decoder/sink\n");
 	sinkpad = gst_element_get_static_pad (s, "sink");
 	gst_pad_link (pad, sinkpad);
@@ -144,8 +144,6 @@ int main(int argc, char *argv[]) {
 
 	g_print ("Returned, stopping playback\n");
 	gst_element_set_state (pipeline, GST_STATE_NULL);
-
-
 
 	gst_object_unref (GST_OBJECT(pipeline));
 	g_source_remove (bus_watch_id);
